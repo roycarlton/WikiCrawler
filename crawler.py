@@ -2,6 +2,35 @@ import urllib.request as urllib
 import httplib
 import re
 
+#def close_files(a, b, c):
+#    a.close()
+#    b.close()
+#    c.close()
+
+def read_from_queue(file_name):
+    f=open(file_name, "r")
+    line = f.readline()
+    f.close()
+    return line
+
+def add_to_file(file_name, data):
+    f = open(file_name, "a+")
+    f.write("\n" + str(data))
+    f.close()
+
+#For removing top item from queue after it has been searched and added
+def delete_top_line(file_name):
+    #This method adapted from reddit user novel_yet_trivial's comment at:
+    #https://www.reddit.com/r/learnpython/comments/3xuych/least_resource_intensive_way_to_delete_first_line/
+    #Acessed on 11/11/2020 at 15:31
+    f = open(file_name, "r+")
+    f.readline()
+    data = f.read()
+    f.seek(0)
+    f.write(data)
+    f.truncate()
+    f.close()
+
 def url_exists(url):
     connection = httplib.HTTPConnection(url)
     connection.request("HEAD", "")
