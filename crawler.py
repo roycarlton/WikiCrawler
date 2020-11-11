@@ -1,5 +1,4 @@
 import urllib.request as urllib
-import httplib
 import re
 
 #def close_files(a, b, c):
@@ -10,13 +9,13 @@ import re
 def read_from_queue(file_name):
     f=open(file_name, "r")
     line = f.readline()
+    while "h" not in line:
+        line = f.readline()
     f.close()
     return line
 
-def add_to_file(file_name, data):
-    f = open(file_name, "a+")
+def add_to_file(file, data):
     f.write("\n" + str(data))
-    f.close()
 
 #For removing top item from queue after it has been searched and added
 def delete_top_line(file_name):
@@ -31,13 +30,30 @@ def delete_top_line(file_name):
     f.truncate()
     f.close()
 
-def url_exists(url):
-    connection = httplib.HTTPConnection(url)
-    connection.request("HEAD", "")
-    if connection.getresponse().status == 200:
-        return True
-    else:
-        return False
+# def url_exists(url):
+#     connection = httplib.HTTPConnection(url)
+#     connection.request("HEAD", "")
+#     if connection.getresponse().status == 200:
+#         return True
+#     else:
+#         return False
+
+#Check url exists and get webpage
+def get_page(url):
+    #Code adapted from StackOverflow user adem-Öztaş at:
+    #https://stackoverflow.com/questions/16778435/python-check-if-website-exists
+    #Accessed on 11/11/2020 at 16:28
+    try:
+        response = urllib.urlopen(url)
+    except urllib.HTTPError:
+        print("HTTPError")
+        return ""
+    except urllib.URLError:
+        print("URLError")
+        return ""
+    html = str(response.read())
+    html = remove_space(html)
+    return html
 
 def remove_space(string):
     return string.replace(" ", "")
@@ -58,7 +74,11 @@ def find_link(page, start_loc):
 
 
 def is_wiki_link(link):
-    return 'https://en.wikipedia.org/wiki/' in link
+    return link[:30] == 'https://en.wikipedia.org/wiki/'
+
+#Remove first part of link to leave just the title
+def get_link_title(url):
+    return url[30:]
 
 #Given a web page, return a list of all the wikipedia links found in it
 def find_wiki_links(page):
@@ -73,9 +93,24 @@ def find_wiki_links(page):
 
 if __name__ == "__main__":
 
-    
+    pages_name = "pages.txt"
+    url_queue_name = "urlQueue.txt"
 
-#    response = urllib.urlopen('https://en.wikipedia.org/wiki/Wikipedia')
-#    html = response.read()
-#    html = remove_space(html)
-#    print(html)
+    while True:
+        #Get next url
+        current_url = read_from_queue(url_queue_name)
+        #Download the html
+        html = get_page(current_url)
+        if html != "":
+            #Scan for wiki links and add to urlQueue.txt
+            links = find_wiki_links(html)
+            f = open(url_queue_name, "a+")
+            for link in links:
+                add_to_file(f, link)
+            f.close()
+            #Add current page to pages.txt since it has been searched
+            f = open(pages_name, "a+")
+            add_to_file(f, get_link_title(current_url))
+            f.close()
+        #Remove current url from urlQueue.txt
+        delete_top_line(url_queue_name)
